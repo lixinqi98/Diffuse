@@ -1,0 +1,55 @@
+{
+"dataset": {
+    "name": "sequence",
+    "path": "data/output_data.csv",
+    "resolution": 32
+}
+,
+"model": {
+    "in_channel": 1,
+    "channel": 256,
+    "channel_multiplier": [1, 2, 2, 2],
+    "n_res_blocks": 2,
+    "attn_strides": [16],
+    "mean_type": "eps",
+    "var_type": "fixedlarge",
+    "loss_type": "kl",
+    "dropout": 0.1,
+    "fold": 1,
+    "schedule": {
+        "type": "linear",
+        "beta_start": 1e-4,
+        "beta_end": 2e-2,
+        "n_timestep": 200
+    },
+    "device": "cuda",
+    "precision": 32
+}
+,
+"training": {
+    "n_iter" : 500000,
+    "optimizer": {
+        "type": "adam",
+        "lr": 2e-4
+    },
+    "dataloader": {
+        "batch_size": 32,
+        "num_workers": 1,
+        "drop_last": true
+    }
+}
+,
+"validation": {
+    "dataloader": {
+        "batch_size": 32,
+        "num_workers": 1,
+        "drop_last": false
+    }
+},
+"evaluate": {
+    "wandb": false,
+    "log_every": 500,
+    "save_every": 5000,
+    "valid_every": 5000
+}
+}
