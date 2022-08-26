@@ -2,7 +2,7 @@
 "dataset": {
     "name": "sequence",
     "path": "data/output_data.csv",
-    "resolution": 32
+    "resolution": 256
 }
 ,
 "model": {
@@ -20,29 +20,29 @@
         "type": "linear",
         "beta_start": 1e-4,
         "beta_end": 2e-2,
-        "n_timestep": 200
+        "n_timestep": 1000
     },
     "device": "cuda",
     "precision": 32
 }
 ,
 "training": {
-    "n_iter" : 500000,
+    "n_epoch" : 100,
     "optimizer": {
         "type": "adam",
         "lr": 2e-4
     },
     "dataloader": {
-        "batch_size": 32,
-        "num_workers": 1,
+        "batch_size": 64,
+        "num_workers": 4,
         "drop_last": true
     }
 }
 ,
 "validation": {
     "dataloader": {
-        "batch_size": 32,
-        "num_workers": 1,
+        "batch_size": 64,
+        "num_workers": 4,
         "drop_last": false
     }
 },

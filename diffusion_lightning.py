@@ -1,6 +1,9 @@
+from asyncio.log import logger
 import os
 import json
 import argparse
+import numpy as np
+import pandas as pd
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -172,8 +175,8 @@ class DDP(pl.LightningModule):
 
         seq, _ = batch
         time   = (torch.rand(seq.shape[0]) * self.conf.model.schedule.n_timestep).type(torch.int64).to(seq.device)
-        loss   = self.diffusion.training_losses(self.ema, seq, time).mean()
-
+        loss   = self.diffusion.training_lxosses(self.ema, seq, time).mean()
+        self.logger('validation_loss', loss)
         return {'val_loss': loss}
 
     def validation_epoch_end(self, outputs):
@@ -181,13 +184,13 @@ class DDP(pl.LightningModule):
         avg_loss         = torch.stack([x['val_loss'] for x in outputs]).mean()
         tensorboard_logs = {'val_loss': avg_loss}
 
-        shape  = (16, 3, self.conf.dataset.resolution, self.conf.dataset.resolution) # TODO: why 16?
+        shape  = (16, 1, 1, self.conf.dataset.resolution) # TODO: why 16?
         sample = progressive_samples_fn(self.ema, self.diffusion, shape, device='cuda' if self.on_gpu else 'cpu')
 
         grid = make_grid(sample['samples'], nrow=4)
         self.logger.experiment.add_image(f'generated_images', grid, self.current_epoch)
 
-        grid = make_grid(sample['progressive_samples'].reshape(-1, 3, self.conf.dataset.resolution, self.conf.dataset.resolution), nrow=20)
+        grid = make_grid(sample['progressive_samples'].reshape(-1, 1, 1, self.conf.dataset.resolution), nrow=20)
         self.logger.experiment.add_image(f'progressive_generated_images', grid, self.current_epoch)
         
         return {'val_loss': avg_loss, 'log': tensorboard_logs}
@@ -230,7 +233,11 @@ if __name__ == "__main__":
     conf = obj(conf)
     denoising_diffusion_model = DDP(conf)
 
+    # args.train = True
+    print(f"Mona - debug : training {args.train}")
+    
     if args.train:
+        print(f"Mona - debug: Run the training process--------------")
         checkpoint_callback = ModelCheckpoint(filepath=os.path.join(args.ckpt_dir, 'ddp_{epoch:02d}-{val_loss:.2f}'),
                                               monitor='val_loss',
                                               verbose=True,
@@ -243,16 +250,20 @@ if __name__ == "__main__":
 
         trainer = pl.Trainer(fast_dev_run=False,
                              gpus=args.n_gpu,
-                             max_steps=conf.training.n_iter,
+                             max_epochs=conf.training.n_epoch,
                              precision=conf.model.precision,
                              gradient_clip_val=1.,
                              progress_bar_refresh_rate=20,
-                             checkpoint_callback=checkpoint_callback)
+                             checkpoint_callback=checkpoint_callback,
+                             logger=True)
 
         trainer.fit(denoising_diffusion_model)
 
     else:
-        
+        print(f"Mona - debug: Run the eval process")
+
+        # conf.dataset.resolution = 256
+
         denoising_diffusion_model.cuda()
         state_dict = torch.load(args.model_dir)
         denoising_diffusion_model.load_state_dict(state_dict['state_dict'])
@@ -260,19 +271,18 @@ if __name__ == "__main__":
 
         sample = progressive_samples_fn(denoising_diffusion_model.ema,
                                         denoising_diffusion_model.diffusion,
-                                        (args.n_samples, 3, conf.dataset.resolution, conf.dataset.resolution),
+                                        (args.n_samples, 1, 1, conf.dataset.resolution),
                                         device='cuda',
                                         include_x0_pred_freq=args.prog_sample_freq)
 
         if not os.path.exists(args.sample_dir):
             os.mkdir(args.sample_dir)
 
-        for i in range(args.n_samples):
+        print(f"Mona - debug: The number of sample, {len(sample['samples'])}")
+        print(f"Mona - debug: The shape of the samples {sample['samples'][0].shape}")
+        generated_samples = [seq.cpu().numpy().transpose(1, 2, 0).squeeze() for seq in sample['samples']]
+        print(f"Mona - debug: The generated samples {len(generated_samples)} and sequence shape {generated_samples[0].shape}")
 
-            img = sample['samples'][i]
-            plt.imsave(os.path.join(args.sample_dir, f'sample_{i}.png'), img.cpu().numpy().transpose(1, 2, 0))
-
-            img = sample['progressive_samples'][i]
-            img = make_grid(img, nrow=args.prog_sample_freq)
-            plt.imsave(os.path.join(args.sample_dir, f'prog_sample_{i}.png'), img.cpu().numpy().transpose(1, 2, 0))
+        for i in range(len(generated_samples)):
+            np.save(os.path.join(args.sample_dir, f"sample_{i}"), generated_samples[i])
 
