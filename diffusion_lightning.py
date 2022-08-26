@@ -175,7 +175,7 @@ class DDP(pl.LightningModule):
 
         seq, _ = batch
         time   = (torch.rand(seq.shape[0]) * self.conf.model.schedule.n_timestep).type(torch.int64).to(seq.device)
-        loss   = self.diffusion.training_lxosses(self.ema, seq, time).mean()
+        loss   = self.diffusion.training_losses(self.ema, seq, time).mean()
         self.logger('validation_loss', loss)
         return {'val_loss': loss}
 
