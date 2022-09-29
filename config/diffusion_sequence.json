@@ -20,20 +20,20 @@
         "type": "linear",
         "beta_start": 1e-4,
         "beta_end": 2e-2,
-        "n_timestep": 1000
+        "n_timestep": 500
     },
     "device": "cuda",
     "precision": 32
 }
 ,
 "training": {
-    "n_epoch" : 100,
+    "n_epoch" : 50,
     "optimizer": {
         "type": "adam",
         "lr": 2e-4
     },
     "dataloader": {
-        "batch_size": 64,
+        "batch_size": 16,
         "num_workers": 4,
         "drop_last": true
     }
@@ -41,7 +41,7 @@
 ,
 "validation": {
     "dataloader": {
-        "batch_size": 64,
+        "batch_size": 16,
         "num_workers": 4,
         "drop_last": false
     }

@@ -176,7 +176,7 @@ class DDP(pl.LightningModule):
         seq, _ = batch
         time   = (torch.rand(seq.shape[0]) * self.conf.model.schedule.n_timestep).type(torch.int64).to(seq.device)
         loss   = self.diffusion.training_losses(self.ema, seq, time).mean()
-        self.logger('validation_loss', loss)
+        # self.logger('validation_loss', loss)
         return {'val_loss': loss}
 
     def validation_epoch_end(self, outputs):
@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # parser.add_argument("--train", action="store_true", default=False, help="Training or evaluation?")
-    parser.add_argument("--train", default=True, help="Training or evaluation?")
+    parser.add_argument("--train", type=bool, default=True, help="Training or evaluation?")
     parser.add_argument("--config", type=str, default='config/diffusion_sequence.json', help="Path to config.")
 
     # Training specific args
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     # args.train = True
     print(f"Mona - debug : training {args.train}")
     
-    if args.train:
+    if args.train is True:
         print(f"Mona - debug: Run the training process--------------")
         checkpoint_callback = ModelCheckpoint(filepath=os.path.join(args.ckpt_dir, 'ddp_{epoch:02d}-{val_loss:.2f}'),
                                               monitor='val_loss',
